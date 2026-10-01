@@ -81,3 +81,28 @@ def test_video_cli(tmp_path):
     out = json.loads(r.stdout)
     assert out["frames_sampled"] >= 4
     assert "bloom_slope" in out
+
+
+def test_watch_folder_narrative(tmp_path):
+    from opencv26 import watch, synth
+    import cv2, numpy as np
+    for i, green in enumerate([20, 60, 110, 160]):
+        img = np.zeros((64, 64, 3), dtype=np.uint8)
+        img[:] = (30, green, 30)
+        cv2.imwrite(str(tmp_path / f"f{i}.png"), img)
+    rep = watch.watch_folder(str(tmp_path), log_path=str(tmp_path / "log.jsonl"))
+    assert rep["alert"] is True
+    assert "ALERT" in rep["narrative"]
+    assert "bloom" in rep["narrative"]
+    log = (tmp_path / "log.jsonl").read_text()
+    assert "ALERT" in log
+
+
+def test_watch_folder_all_clear(tmp_path):
+    from opencv26 import watch, synth
+    import cv2
+    for i in range(3):
+        cv2.imwrite(str(tmp_path / f"c{i}.png"), synth.make_clear_water(seed=200 + i))
+    rep = watch.watch_folder(str(tmp_path))
+    assert rep["alert"] is False
+    assert rep["narrative"].startswith("All clear")
