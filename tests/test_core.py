@@ -63,3 +63,21 @@ def test_trend_calm_water_no_alert(tmp_path):
         paths.append(str(p))
     trend = core.analyze_frames(paths)
     assert trend["alert"] is False
+
+
+def test_video_cli(tmp_path):
+    import subprocess, sys, json
+    import cv2, numpy as np
+    # build a tiny test video: clear -> bloom progression
+    vw = cv2.VideoWriter(str(tmp_path / "t.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), 10, (64, 64))
+    for i in range(20):
+        img = np.zeros((64, 64, 3), dtype=np.uint8)
+        img[:] = (100, 60 + i * 5, 60)
+        vw.write(img)
+    vw.release()
+    r = subprocess.run([sys.executable, "-m", "opencv26", "video", str(tmp_path / "t.mp4"), "6"],
+                       capture_output=True, text=True)
+    assert r.returncode in (0, 2)
+    out = json.loads(r.stdout)
+    assert out["frames_sampled"] >= 4
+    assert "bloom_slope" in out
